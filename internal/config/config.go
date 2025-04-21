@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -13,6 +14,8 @@ import (
 type Config struct {
 	JWTSecret string
 	JWTExpire int
+	Username  string
+	Password  string
 }
 
 var (
@@ -50,18 +53,57 @@ func InitConfig() (*Config, error) {
 			return
 		}
 
+		filePath := os.Getenv("CONFIG_FILE")
+		if filePath == "" {
+			zap.S().Error("CONFIG_FILE не установлен в переменных окружения")
+			initErr = fmt.Errorf("CONFIG_FILE не установлен")
+			return
+		}
+
+		username, password, err := readCredentialsFromJSON(filePath)
+		if err != nil {
+			zap.S().Error("Ошибка чтения учетных данных из JSON файла", zap.Error(err))
+			initErr = fmt.Errorf("ошибка чтения учетных данных из JSON файла: %w", err)
+			return
+		}
+
 		cfg = &Config{
 			JWTSecret: jwtSecret,
 			JWTExpire: jwtExpire,
+			Username:  username,
+			Password:  password,
+		}
+
+		if cfg.JWTSecret == "" || cfg.JWTExpire <= 0 || cfg.Username == "" || cfg.Password == "" {
+			zap.S().Error("Конфигурация содержит некорректные данные")
+			initErr = fmt.Errorf("конфигурация содержит некорректные данные")
+			return
 		}
 	})
 
 	return cfg, initErr
 }
 
-func GetConfig() *Config {
-	if cfg == nil {
-		zap.S().Error("Конфигурация не инициализирована.")
+func readCredentialsFromJSON(filePath string) (string, string, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		zap.S().Error("Ошибка открытия файла", zap.String("filePath", filePath), zap.Error(err))
+		return "", "", fmt.Errorf("ошибка открытия файла %s: %w", filePath, err)
 	}
-	return cfg
+
+	var credentials struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	err = json.Unmarshal(data, &credentials)
+	if err != nil {
+		zap.S().Error("Ошибка декодирования JSON", zap.String("filePath", filePath), zap.Error(err))
+		return "", "", fmt.Errorf("ошибка декодирования JSON: %w", err)
+	}
+
+	if credentials.Username == "" || credentials.Password == "" {
+		zap.S().Error("Пустые учетные данные в JSON", zap.String("filePath", filePath))
+		return "", "", fmt.Errorf("пустые учетные данные в JSON")
+	}
+	return credentials.Username, credentials.Password, nil
 }
