@@ -3,20 +3,26 @@ package main
 import (
 	"net/http"
 
+	"github.com/RiddlerXenon/cloud-core/internal/config"
 	"github.com/RiddlerXenon/cloud-core/internal/middleware"
 	"github.com/RiddlerXenon/cloud-core/internal/routes"
 	"go.uber.org/zap"
 )
 
-func init() {
-	zap.ReplaceGlobals(zap.Must(zap.NewProduction()))
-}
-
 func main() {
+	// Initialize the logger
+	logger := zap.Must(zap.NewProduction())
+	defer logger.Sync()
+	zap.ReplaceGlobals(logger)
+
+	// Initialize the configuration
+	_, err := config.InitConfig()
+	if err != nil {
+		zap.S().Fatal("Failed to initialize configuration: ", err)
+	}
+
 	mux := http.NewServeMux()
-
-	routes := routes.RegisterRoutes(mux)
-
+	routes.RegisterRoutes(mux)
 	handlerWithMiddleware := middleware.CORS(mux)
 
 	zap.S().Info("Starting server on :8080")
