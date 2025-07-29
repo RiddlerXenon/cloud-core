@@ -1,4 +1,4 @@
-package handler
+package handlers
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func LoginHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		zap.S().Errorw("Method not allowed", "method", r.Method)
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -22,7 +22,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.Login(req.Username, req.Password)
+	token, err := auth.Login(req.Username, req.Password, h.Cfg)
 	if err != nil {
 		zap.S().Errorw("Login failed", "error", err)
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)

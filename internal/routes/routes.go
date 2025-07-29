@@ -11,10 +11,10 @@ type Route struct {
 	Handler http.HandlerFunc
 }
 
-func RegisterRoutes(mux *http.ServeMux) {
+func RegisterRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	routes := []Route{
-		{Path: "/auth/login", Handler: handlers.LoginHandler},
-		{Path: "/auth/logout", Handler: handlers.LogoutHandler},
+		{Path: "/auth/login", Handler: h.LoginHandler},
+		//{Path: "/auth/logout", Handler: handlers.LogoutHandler},
 	}
 
 	for _, route := range routes {

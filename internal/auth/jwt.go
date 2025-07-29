@@ -9,9 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func GenerateJWT(userID string) (string, error) {
-	cfg := config.GetConfig()
-
+func GenerateJWT(cfg *config.Config, userID string) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": userID,
 		"exp":     time.Now().Add(time.Hour * time.Duration(cfg.JWTExpire)).Unix(),
@@ -21,7 +19,6 @@ func GenerateJWT(userID string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	if cfg.JWTSecret == "" {
-		zap.S().Error("JWT secret is not set")
 		return "", fmt.Errorf("JWT secret is not set")
 	}
 
@@ -33,12 +30,10 @@ func ValidateJWT(tokenString string) (map[string]interface{}, error) {
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			zap.S().Errorw("Unexpected signing method", "alg", token.Header["alg"])
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
 
 		if cfg.JWTSecret == "" {
-			zap.S().Error("JWT secret is not set")
 			return nil, fmt.Errorf("JWT secret is not set")
 		}
 
