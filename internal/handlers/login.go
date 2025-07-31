@@ -22,12 +22,32 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.Login(req.Username, req.Password, h.Cfg)
+	hash, err := h.DB.GetHashedPass(req.Username)
 	if err != nil {
-		zap.S().Errorw("Login failed", "error", err)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		zap.S().Errorw("Failed to get hashed pass", "error", err)
+		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
+
+	if !auth.VerifyPassword(req.Password, hash) {
+		zap.S().Error("Password not verified!")
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	token, err := auth.GenerateJWT(h.Cfg, req.Username)
+	if err != nil {
+		zap.S().Errorw("Failed to generate JWT", "error", err)
+		http.Error(w, "Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// token, err := auth.Login(req.Username, req.Password, h.Cfg)
+	// if err != nil {
+	// 	zap.S().Errorw("Login failed", "error", err)
+	// 	http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	// 	return
+	// }
 
 	resp := loginResponse{
 		Token: token,

@@ -23,13 +23,13 @@ func main() {
 		zap.S().Fatal("Failed to initialize configuration: ", err)
 	}
 
-	db, err := repository.InitDB()
+	d, err := repository.InitDB(cfg)
 	if err != nil {
 		zap.S().Fatal("Failed to initialize DB: ", err)
 	}
-	defer db.Close()
+	defer d.DB.Close()
 
-	h := handlers.New(db, cfg)
+	h := handlers.New(d, cfg)
 
 	mux := http.NewServeMux()
 	routes.RegisterRoutes(mux, h)
